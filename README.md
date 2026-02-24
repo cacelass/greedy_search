@@ -107,7 +107,7 @@ git clone https://github.com/cacelass/greedy_search
 cd greedy_search
 
 # Instalar con todas las dependencias
-pip install -e ".[dev,ml]"
+make setup
 ```
 
 ---
@@ -117,7 +117,7 @@ pip install -e ".[dev,ml]"
 ### Ejecutar el programa principal
 
 ```bash
-python main.py
+uv run python3 main.py
 ```
 
 Esto ejecutará la búsqueda greedy global y la local, mostrando un gráfico

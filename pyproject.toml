@@ -1,11 +1,12 @@
 [project]
 name = "greedy_search"
 version = "0.1.0"
-description = "Este proyecto aborda un problema clásico de optimización en Inteligencia Artificial conocido como "Set Covering Problem"."
+description = 'Este proyecto aborda un problema clásico de optimización en Inteligencia Artificial conocido como "Set Covering Problem".'
 readme = "README.md"
 requires-python = ">=3.10"
-
-dependencies = []
+dependencies = [
+    "matplotlib>=3.10.8",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -17,11 +18,9 @@ dev = [
     "sphinx-rtd-theme",
     "ty",
 ]
-
 ml = [
     "matplotlib",
 ]
-
 
 [build-system]
 requires = ["hatchling"]
