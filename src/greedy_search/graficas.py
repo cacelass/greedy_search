@@ -18,7 +18,7 @@ def plot_greedy_search_global(
     ax1.set_ylabel("Nuevos estados cubiertos", color="skyblue")
     ax1.tick_params(axis="y", labelcolor="skyblue")
 
-    # Crear el segundo eje para la línea
+    # Crear el segundo ej/home/a25alejandrocc/Documentos/MIA/profe/greedy-search/main.pye para la línea
     ax2 = ax1.twinx()
     ax2.plot(
         stations_needed,
