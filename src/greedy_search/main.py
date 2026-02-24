@@ -1,77 +1,166 @@
+"""
+Módulo principal del algoritmo de búsqueda greedy.
+
+Implementa la búsqueda greedy global y local para seleccionar
+el conjunto mínimo de estaciones de radio que cubran todos los
+estados objetivo de EE.UU.
+"""
+
 import random
+from typing import TypeAlias
 
-# estados USA donde queremos ser escuchados
-needed_states = set(["mt", "wa", "or", "id", "nv", "ut", "ca", "az"])
-added_states = set(
-    ["nm", "tx", "ok", "ks", "co", "ne", "sd", "wy", "nd", "ia", "mn", "mo", "ar", "la"]
-)
+# ---------------------------------------------------------------------------
+# Tipos personalizados
+# ---------------------------------------------------------------------------
 
-needed_states.update(added_states)
+StationName: TypeAlias = str
+StateName: TypeAlias = str
+StationsMap: TypeAlias = dict[StationName, set[StateName]]
+SearchResult: TypeAlias = tuple[list[StationName], list[int], list[int], set[StateName]]
 
-# estaciones de radio y estados que cubren
-stations = {}
-stations["kone"] = set(["id", "nv", "ut"])
-stations["ktwo"] = set(["wa", "id", "mt"])
-stations["kthree"] = set(["or", "nv", "ca"])
-stations["kfour"] = set(["nv", "ut"])
-stations["kfive"] = set(["ca", "az"])
+# ---------------------------------------------------------------------------
+# Datos: estados y estaciones
+# ---------------------------------------------------------------------------
 
-stations["ksix"] = set(["nm", "tx", "ok"])
-stations["kseven"] = set(["ok", "ks", "co"])
-stations["keight"] = set(["ks", "co", "ne"])
-stations["knine"] = set(["ne", "sd", "wy"])
-stations["kten"] = set(["nd", "ia"])
-stations["keleven"] = set(["mn", "mo", "ar"])
-stations["ktwelve"] = set(["la"])
-stations["kthirteen"] = set(["mo", "ar"])
+#: Estados del oeste de EE.UU. que se deben cubrir inicialmente.
+WESTERN_STATES: set[StateName] = {"mt", "wa", "or", "id", "nv", "ut", "ca", "az"}
+
+#: Estados del centro y sur que se añaden al objetivo.
+CENTRAL_STATES: set[StateName] = {
+    "nm", "tx", "ok", "ks", "co", "ne", "sd", "wy",
+    "nd", "ia", "mn", "mo", "ar", "la",
+}
+
+#: Conjunto total de estados que deben quedar cubiertos al final.
+needed_states: set[StateName] = WESTERN_STATES | CENTRAL_STATES
+
+#: Mapa de estaciones de radio y los estados que cada una cubre.
+stations: StationsMap = {
+    "kone":      {"id", "nv", "ut"},
+    "ktwo":      {"wa", "id", "mt"},
+    "kthree":    {"or", "nv", "ca"},
+    "kfour":     {"nv", "ut"},
+    "kfive":     {"ca", "az"},
+    "ksix":      {"nm", "tx", "ok"},
+    "kseven":    {"ok", "ks", "co"},
+    "keight":    {"ks", "co", "ne"},
+    "knine":     {"ne", "sd", "wy"},
+    "kten":      {"nd", "ia"},
+    "keleven":   {"mn", "mo", "ar"},
+    "ktwelve":   {"la"},
+    "kthirteen": {"mo", "ar"},
+}
+
+# ---------------------------------------------------------------------------
+# Funciones
+# ---------------------------------------------------------------------------
 
 
-def find_best_station(stations, covered_states):
-    stations_and_gradients = {
-        station: len(station_states - covered_states)
-        for station, station_states in stations.items()
+def find_best_station(
+    stations: StationsMap,
+    covered_states: set[StateName],
+) -> tuple[StationName, int]:
+    """Encuentra la estación que cubre la mayor cantidad de estados aún sin cubrir.
+
+    Calcula el *gradiente* de cada estación (número de estados nuevos que
+    aportaría) y devuelve la que maximiza dicho valor.
+
+    :param stations: Mapa de estaciones disponibles y sus estados cubiertos.
+    :type stations: StationsMap
+    :param covered_states: Conjunto de estados ya cubiertos.
+    :type covered_states: set[StateName]
+    :return: Tupla ``(nombre_estación, gradiente_máximo)``.
+    :rtype: tuple[StationName, int]
+
+    Ejemplo::
+
+        >>> find_best_station({"k1": {"a", "b"}, "k2": {"b", "c"}}, {"b"})
+        ('k2', 1)
+    """
+    gradients: dict[StationName, int] = {
+        station: len(states - covered_states)
+        for station, states in stations.items()
     }
-    best_station = max(
-        stations_and_gradients, key=stations_and_gradients.get, default=0
-    )
-    best_gradient = stations_and_gradients[best_station]
-    return best_station, best_gradient
+    best_station: StationName = max(gradients, key=gradients.get, default="")
+    return best_station, gradients[best_station]
 
 
-def greedy_search_global(stations, needed_states):
-    stations_remaining = stations.copy()
-    covered_states = set()
-    stations_needed = []
+def greedy_search_global(
+    stations: StationsMap,
+    needed_states: set[StateName],
+) -> SearchResult:
+    """Ejecuta la búsqueda greedy global para cubrir todos los estados requeridos.
 
-    gradients = []
-    num_states_covered = []
+    En cada iteración selecciona la estación que cubre la mayor cantidad de
+    estados nuevos (estrategia voraz global) hasta que todos los estados
+    objetivo estén cubiertos.
+
+    :param stations: Mapa completo de estaciones y sus estados.
+    :type stations: StationsMap
+    :param needed_states: Conjunto de estados que deben quedar cubiertos.
+    :type needed_states: set[StateName]
+    :return: Tupla con:
+
+        - **stations_needed** – Lista ordenada de estaciones seleccionadas.
+        - **num_states_covered** – Número acumulado de estados cubiertos tras
+          cada selección.
+        - **gradients** – Gradiente (estados nuevos) aportado por cada estación
+          seleccionada.
+        - **covered_states** – Conjunto final de estados cubiertos.
+
+    :rtype: SearchResult
+    """
+    remaining: StationsMap = stations.copy()
+    covered_states: set[StateName] = set()
+    stations_needed: list[StationName] = []
+    gradients: list[int] = []
+    num_states_covered: list[int] = []
 
     while covered_states < needed_states:
-        best_station, best_gradient = find_best_station(
-            stations_remaining, covered_states
-        )
+        best_station, best_gradient = find_best_station(remaining, covered_states)
 
-        if best_station:
-            covered_states |= stations_remaining[best_station]
-            stations_needed.append(best_station)
-            num_states_covered.append(len(covered_states))
-            gradients.append(best_gradient)
-            del stations_remaining[best_station]
+        if not best_station:
+            break
 
-    return (stations_needed, num_states_covered, gradients, covered_states)
+        covered_states |= remaining.pop(best_station)
+        stations_needed.append(best_station)
+        gradients.append(best_gradient)
+        num_states_covered.append(len(covered_states))
+
+    return stations_needed, num_states_covered, gradients, covered_states
 
 
-def greedy_search_local(stations, needed_states):
-    NUM_SEARCHES = 40
-    MAX_NUM_STATIONS = 10
-    num_uncovered_states = []
-    # stations_needed = []
-    for _ in range(NUM_SEARCHES):
-        covered_states = set()
-        stations_names = list(stations.keys())
-        random_stations = random.sample(stations_names, k=MAX_NUM_STATIONS)
-        for station in random_stations:
-            covered_states |= (stations[station])
-            # stations_needed.append(station)
-        num_uncovered_states.append(len(needed_states - covered_states))
-    return num_uncovered_states
+def greedy_search_local(
+    stations: StationsMap,
+    needed_states: set[StateName],
+    num_searches: int = 40,
+    max_stations: int = 10,
+) -> list[int]:
+    """Ejecuta múltiples búsquedas greedy locales con selección aleatoria.
+
+    En cada iteración se elige un subconjunto aleatorio de estaciones y se
+    registra cuántos estados quedan sin cubrir, permitiendo analizar la
+    distribución de mínimos locales.
+
+    :param stations: Mapa completo de estaciones y sus estados.
+    :type stations: StationsMap
+    :param needed_states: Conjunto de estados que deben quedar cubiertos.
+    :type needed_states: set[StateName]
+    :param num_searches: Número de iteraciones aleatorias. Por defecto ``40``.
+    :type num_searches: int
+    :param max_stations: Tamaño del subconjunto aleatorio por iteración.
+        Por defecto ``10``.
+    :type max_stations: int
+    :return: Lista con el número de estados sin cubrir en cada iteración.
+    :rtype: list[int]
+    """
+    station_names: list[StationName] = list(stations.keys())
+    num_uncovered: list[int] = []
+
+    for _ in range(num_searches):
+        covered: set[StateName] = set()
+        for station in random.sample(station_names, k=max_stations):
+            covered |= stations[station]
+        num_uncovered.append(len(needed_states - covered))
+
+    return num_uncovered
