@@ -1,0 +1,50 @@
+[project]
+name = "greedy_search"
+version = "0.1.0"
+description = "Este proyecto aborda un problema clásico de optimización en Inteligencia Artificial conocido como "Set Covering Problem"."
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.9.9",
+    "pytest>=9.0.1",
+    "pytest-cov>=7.0.0",
+    "pytest-sugar>=1.1.1",
+    "sphinx",
+    "sphinx-rtd-theme",
+    "ty",
+]
+
+ml = [
+    "matplotlib",
+]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/greedy_search"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src",
+    "README.md",
+    "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+select = ["E", "F", "I"]
+fix = true
